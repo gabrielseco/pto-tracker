@@ -1,11 +1,16 @@
-import { NextResponse } from 'next/server';
-import { redis } from '@/lib/redis';
-import { Employee, PTORequest, PublicHoliday, EmployeeStats } from '@/lib/types';
-import { parseISO, isWithinInterval } from 'date-fns';
+import { NextResponse } from "next/server";
+import { redis } from "@/lib/redis";
+import {
+  Employee,
+  PTORequest,
+  PublicHoliday,
+  EmployeeStats,
+} from "@/lib/types";
+import { parseISO, isWithinInterval } from "date-fns";
 
-const EMPLOYEES_KEY = 'employees';
-const PTO_REQUESTS_KEY = 'pto-requests';
-const HOLIDAYS_KEY = 'public-holidays';
+const EMPLOYEES_KEY = "employees";
+const PTO_REQUESTS_KEY = "pto-requests";
+const HOLIDAYS_KEY = "public-holidays";
 
 export async function GET() {
   try {
@@ -15,9 +20,9 @@ export async function GET() {
       redis.get<PublicHoliday[]>(HOLIDAYS_KEY),
     ]);
 
-    const stats: EmployeeStats[] = (employees ?? []).map(employee => {
+    const stats: EmployeeStats[] = (employees ?? []).map((employee) => {
       // Filter requests for this employee that match the employee's year
-      const employeeRequests = (ptoRequests ?? []).filter(req => {
+      const employeeRequests = (ptoRequests ?? []).filter((req) => {
         if (req.employeeId !== employee.id) return false;
 
         // Match based on the PTO request's year field
@@ -28,12 +33,12 @@ export async function GET() {
       let regularPTODays = 0;
       let publicHolidayDays = 0;
 
-      employeeRequests.forEach(req => {
+      employeeRequests.forEach((req) => {
         const start = parseISO(req.startDate);
         const end = parseISO(req.endDate);
 
         // Check if this PTO request overlaps with any public holidays
-        const overlappingHolidays = (holidays ?? []).filter(holiday => {
+        const overlappingHolidays = (holidays ?? []).filter((holiday) => {
           if (holiday.year !== employee.year) return false;
           const holidayDate = parseISO(holiday.date);
           return isWithinInterval(holidayDate, { start, end });
@@ -50,18 +55,18 @@ export async function GET() {
       const calculatedTakenDays = regularPTODays;
 
       const workingOnHolidays = (holidays ?? [])
-        .filter(holiday => {
+        .filter((holiday) => {
           // Only check holidays for the employee's year
           if (holiday.year !== employee.year) return false;
 
           const holidayDate = parseISO(holiday.date);
-          return !employeeRequests.some(req => {
+          return !employeeRequests.some((req) => {
             const start = parseISO(req.startDate);
             const end = parseISO(req.endDate);
             return isWithinInterval(holidayDate, { start, end });
           });
         })
-        .map(holiday => ({
+        .map((holiday) => ({
           date: holiday.date,
           holidayName: holiday.name,
         }));
@@ -80,7 +85,10 @@ export async function GET() {
 
     return NextResponse.json(stats);
   } catch (error) {
-    console.error('Error fetching stats:', error);
-    return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 });
+    console.error("Error fetching stats:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch stats" },
+      { status: 500 }
+    );
   }
 }

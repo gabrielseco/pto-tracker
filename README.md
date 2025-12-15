@@ -132,11 +132,13 @@ vercel
 Based on your requirements, you should add:
 
 **Employees:**
+
 - Habiba: 23 days taken
 - Carmen: 23 days taken
 - Ine: 17 days taken
 
 **Public Holidays:**
+
 - Add all 14 public holidays for your region/year
 
 ## API Routes
