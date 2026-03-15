@@ -4,6 +4,7 @@ import {
   PTORequest,
   PublicHoliday,
   ExtraDaysWorked,
+  StandbyDay,
   EmployeeStats,
 } from "./types";
 
@@ -211,6 +212,53 @@ export function useDeleteExtraDay() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["extra-days"] });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+    },
+  });
+}
+
+export function useStandbyDays() {
+  return useQuery<StandbyDay[]>({
+    queryKey: ["standby-days"],
+    queryFn: async () => {
+      const res = await fetch("/api/standby-days");
+      if (!res.ok) throw new Error("Failed to fetch standby days");
+      return res.json();
+    },
+  });
+}
+
+export function useAddStandbyDay() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (entry: Omit<StandbyDay, "id">) => {
+      const res = await fetch("/api/standby-days", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(entry),
+      });
+      if (!res.ok) throw new Error("Failed to add standby day");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["standby-days"] });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+    },
+  });
+}
+
+export function useDeleteStandbyDay() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/standby-days?id=${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete standby day");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["standby-days"] });
       queryClient.invalidateQueries({ queryKey: ["stats"] });
     },
   });

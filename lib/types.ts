@@ -35,6 +35,17 @@ export interface ExtraDaysWorked {
   year: number;
 }
 
+export interface StandbyDay {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  startDate: string;
+  endDate: string;
+  totalDays: number;
+  note: string;
+  year: number;
+}
+
 export interface EmployeeStats {
   employee: Employee;
   requests: PTORequest[];
@@ -45,4 +56,5 @@ export interface EmployeeStats {
     holidayName: string;
   }>;
   extraDaysWorked: ExtraDaysWorked[];
+  standbyDays: StandbyDay[];
 }
