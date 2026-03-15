@@ -4,6 +4,7 @@ import {
   Employee,
   PTORequest,
   PublicHoliday,
+  ExtraDaysWorked,
   EmployeeStats,
 } from "@/lib/types";
 import { parseISO, isWithinInterval } from "date-fns";
@@ -11,13 +12,15 @@ import { parseISO, isWithinInterval } from "date-fns";
 const EMPLOYEES_KEY = "employees";
 const PTO_REQUESTS_KEY = "pto-requests";
 const HOLIDAYS_KEY = "public-holidays";
+const EXTRA_DAYS_KEY = "extra-days-worked";
 
 export async function GET() {
   try {
-    const [employees, ptoRequests, holidays] = await Promise.all([
+    const [employees, ptoRequests, holidays, extraDays] = await Promise.all([
       redis.get<Employee[]>(EMPLOYEES_KEY),
       redis.get<PTORequest[]>(PTO_REQUESTS_KEY),
       redis.get<PublicHoliday[]>(HOLIDAYS_KEY),
+      redis.get<ExtraDaysWorked[]>(EXTRA_DAYS_KEY),
     ]);
 
     const stats: EmployeeStats[] = (employees ?? []).map((employee) => {
@@ -71,6 +74,11 @@ export async function GET() {
           holidayName: holiday.name,
         }));
 
+      const employeeExtraDays = (extraDays ?? []).filter(
+        (entry) =>
+          entry.employeeId === employee.id && entry.year === employee.year
+      );
+
       return {
         employee: {
           ...employee,
@@ -80,6 +88,7 @@ export async function GET() {
         remainingDays: employee.totalPTODays - calculatedTakenDays,
         publicHolidayDays: publicHolidayDays,
         workingOnHolidays,
+        extraDaysWorked: employeeExtraDays,
       };
     });
 

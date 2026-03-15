@@ -24,6 +24,17 @@ export interface PublicHoliday {
   year: number;
 }
 
+export interface ExtraDaysWorked {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  startDate: string;
+  endDate: string;
+  totalDays: number;
+  note: string;
+  year: number;
+}
+
 export interface EmployeeStats {
   employee: Employee;
   requests: PTORequest[];
@@ -33,4 +44,5 @@ export interface EmployeeStats {
     date: string;
     holidayName: string;
   }>;
+  extraDaysWorked: ExtraDaysWorked[];
 }

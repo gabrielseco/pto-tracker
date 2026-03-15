@@ -1,5 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Employee, PTORequest, PublicHoliday, EmployeeStats } from "./types";
+import {
+  Employee,
+  PTORequest,
+  PublicHoliday,
+  ExtraDaysWorked,
+  EmployeeStats,
+} from "./types";
 
 export function useEmployees() {
   return useQuery<Employee[]>({
@@ -158,6 +164,53 @@ export function useDeleteHoliday() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["holidays"] });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+    },
+  });
+}
+
+export function useExtraDays() {
+  return useQuery<ExtraDaysWorked[]>({
+    queryKey: ["extra-days"],
+    queryFn: async () => {
+      const res = await fetch("/api/extra-days");
+      if (!res.ok) throw new Error("Failed to fetch extra days");
+      return res.json();
+    },
+  });
+}
+
+export function useAddExtraDay() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (entry: Omit<ExtraDaysWorked, "id">) => {
+      const res = await fetch("/api/extra-days", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(entry),
+      });
+      if (!res.ok) throw new Error("Failed to add extra day");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["extra-days"] });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+    },
+  });
+}
+
+export function useDeleteExtraDay() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/extra-days?id=${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete extra day");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["extra-days"] });
       queryClient.invalidateQueries({ queryKey: ["stats"] });
     },
   });

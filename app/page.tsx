@@ -13,13 +13,16 @@ import {
   useHolidays,
   useAddHoliday,
   useDeleteHoliday,
+  useExtraDays,
+  useAddExtraDay,
+  useDeleteExtraDay,
   useStats,
 } from "@/lib/hooks";
 import type { Employee, PTORequest } from "@/lib/types";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<
-    "dashboard" | "employees" | "pto" | "holidays"
+    "dashboard" | "employees" | "pto" | "holidays" | "extra-days"
   >("dashboard");
 
   return (
@@ -33,7 +36,7 @@ export default function Home() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
           <nav className="flex space-x-4">
-            {["dashboard", "employees", "pto", "holidays"].map((tab) => (
+            {["dashboard", "employees", "pto", "holidays", "extra-days"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab as typeof activeTab)}
@@ -43,7 +46,11 @@ export default function Home() {
                     : "bg-white text-gray-700 hover:bg-gray-100"
                 }`}
               >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab === "extra-days"
+                ? "Extra Days"
+                : tab === "pto"
+                  ? "PTO"
+                  : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
           </nav>
@@ -53,6 +60,7 @@ export default function Home() {
         {activeTab === "employees" && <EmployeesTab />}
         {activeTab === "pto" && <PTOTab />}
         {activeTab === "holidays" && <HolidaysTab />}
+        {activeTab === "extra-days" && <ExtraDaysTab />}
       </main>
     </div>
   );
@@ -105,6 +113,16 @@ function DashboardTab() {
                 <span className="text-gray-600">Remaining PTO Days:</span>
                 <span className="font-semibold text-green-600">
                   {stat.remainingDays}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Extra Days Worked:</span>
+                <span className="font-semibold text-purple-600">
+                  {stat.extraDaysWorked.reduce(
+                    (sum, e) => sum + e.totalDays,
+                    0
+                  )}
                 </span>
               </div>
 
@@ -601,6 +619,227 @@ function PTOTab() {
                   </button>
                   <button
                     onClick={() => deletePTORequest.mutate(request.id)}
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function ExtraDaysTab() {
+  const { data: employees } = useEmployees();
+  const { data: extraDays } = useExtraDays();
+  const addExtraDay = useAddExtraDay();
+  const deleteExtraDay = useDeleteExtraDay();
+
+  const [formData, setFormData] = useState({
+    employeeId: "",
+    startDate: "",
+    endDate: "",
+    totalDays: "",
+    note: "",
+    year: new Date().getFullYear().toString(),
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const employee = employees?.find((emp) => emp.id === formData.employeeId);
+    if (!employee) return;
+
+    await addExtraDay.mutateAsync({
+      employeeId: formData.employeeId,
+      employeeName: employee.name,
+      startDate: formData.startDate,
+      endDate: formData.endDate,
+      totalDays: Number(formData.totalDays),
+      note: formData.note,
+      year: Number(formData.year),
+    });
+
+    setFormData({
+      employeeId: "",
+      startDate: "",
+      endDate: "",
+      totalDays: "",
+      note: "",
+      year: new Date().getFullYear().toString(),
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-gray-900">Extra Days Worked</h2>
+
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+          Log Extra Day Worked
+        </h3>
+        <form
+          onSubmit={handleSubmit}
+          className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4"
+        >
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Employee
+            </label>
+            <select
+              value={formData.employeeId}
+              onChange={(e) =>
+                setFormData({ ...formData, employeeId: e.target.value })
+              }
+              required
+              className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400"
+            >
+              <option value="">Select Employee</option>
+              {employees?.map((emp) => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Start Date
+            </label>
+            <input
+              type="date"
+              value={formData.startDate}
+              onChange={(e) =>
+                setFormData({ ...formData, startDate: e.target.value })
+              }
+              required
+              className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              End Date
+            </label>
+            <input
+              type="date"
+              value={formData.endDate}
+              onChange={(e) =>
+                setFormData({ ...formData, endDate: e.target.value })
+              }
+              required
+              className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Days
+            </label>
+            <input
+              type="number"
+              placeholder="Days"
+              value={formData.totalDays}
+              onChange={(e) =>
+                setFormData({ ...formData, totalDays: e.target.value })
+              }
+              required
+              step="0.5"
+              min="0.5"
+              className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Note
+            </label>
+            <input
+              type="text"
+              placeholder="Reason / description"
+              value={formData.note}
+              onChange={(e) =>
+                setFormData({ ...formData, note: e.target.value })
+              }
+              className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Year
+            </label>
+            <input
+              type="number"
+              placeholder="Year"
+              value={formData.year}
+              onChange={(e) =>
+                setFormData({ ...formData, year: e.target.value })
+              }
+              required
+              min="2020"
+              max="2099"
+              className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400"
+            />
+          </div>
+          <button
+            type="submit"
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors self-end"
+          >
+            Log Days
+          </button>
+        </form>
+      </div>
+
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Employee
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Start Date
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                End Date
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Days
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Note
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Year
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {extraDays?.map((entry) => (
+              <tr key={entry.id}>
+                <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                  {entry.employeeName}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-gray-900">
+                  {format(new Date(entry.startDate), "MMM dd, yyyy")}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-gray-900">
+                  {format(new Date(entry.endDate), "MMM dd, yyyy")}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-purple-600 font-semibold">
+                  {entry.totalDays}
+                </td>
+                <td className="px-6 py-4 text-gray-600">{entry.note}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-gray-900">
+                  {entry.year}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <button
+                    onClick={() => deleteExtraDay.mutate(entry.id)}
                     className="text-red-600 hover:text-red-800"
                   >
                     Delete
