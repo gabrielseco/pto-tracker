@@ -387,9 +387,24 @@ function EmployeesTab() {
 function PTOTab() {
   const { data: employees } = useEmployees();
   const { data: ptoRequests } = usePTORequests();
+  const { data: holidays } = useHolidays();
   const addPTORequest = useAddPTORequest();
   const updatePTORequest = useUpdatePTORequest();
   const deletePTORequest = useDeletePTORequest();
+
+  const isPHRequest = (request: PTORequest) => {
+    if (!holidays) return false;
+    const start = new Date(request.startDate);
+    const end = new Date(request.endDate);
+    return holidays.some((h) => {
+      if (h.year !== request.year) return false;
+      const d = new Date(h.date);
+      return d >= start && d <= end;
+    });
+  };
+
+  const [filterEmployee, setFilterEmployee] = useState("");
+  const [filterType, setFilterType] = useState<"all" | "PTO" | "PH">("all");
 
   const [formData, setFormData] = useState({
     employeeId: "",
@@ -581,6 +596,37 @@ function PTOTab() {
         </form>
       </div>
 
+      <div className="flex flex-wrap gap-3 items-center">
+        <select
+          value={filterEmployee}
+          onChange={(e) => setFilterEmployee(e.target.value)}
+          className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        >
+          <option value="">All Employees</option>
+          {employees?.map((emp) => (
+            <option key={emp.id} value={emp.id}>
+              {emp.name}
+            </option>
+          ))}
+        </select>
+
+        <div className="flex rounded-lg overflow-hidden border border-gray-300">
+          {(["all", "PTO", "PH"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setFilterType(t)}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                filterType === t
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              {t === "all" ? "All Types" : t}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -598,6 +644,9 @@ function PTOTab() {
                 Total Days
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Type
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Year
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -606,7 +655,18 @@ function PTOTab() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {ptoRequests?.map((request) => (
+            {[...(ptoRequests ?? [])]
+              .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+              .filter((r) => {
+                if (filterEmployee && r.employeeId !== filterEmployee) return false;
+                if (filterType !== "all") {
+                  const isPH = isPHRequest(r);
+                  if (filterType === "PH" && !isPH) return false;
+                  if (filterType === "PTO" && isPH) return false;
+                }
+                return true;
+              })
+              .map((request) => (
               <tr key={request.id}>
                 <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
                   {request.employeeName}
@@ -619,6 +679,11 @@ function PTOTab() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-gray-900">
                   {request.totalDays}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${isPHRequest(request) ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>
+                    {isPHRequest(request) ? "PH" : "PTO"}
+                  </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-gray-900">
                   {request.year}
@@ -640,6 +705,7 @@ function PTOTab() {
               </tr>
             ))}
           </tbody>
+
         </table>
       </div>
     </div>
